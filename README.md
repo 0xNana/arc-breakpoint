@@ -4,14 +4,14 @@
 
 Arc BreakPoint is an experimental platform where **every click is an on-chain transaction**, designed to stress test the Arc testnet with gasless passkey-based transactions and measure chain throughput.
 
-## 🎯 Purpose
+##  Purpose
 
 Arc BreakPoint serves as a research platform for:
 - **Passkey Authentication**: Testing WebAuthn-based wallet authentication via Circle Modular Wallets
 - **Chain TPS Testing**: Measuring Arc Testnet throughput by generating high-frequency on-chain transactions
 - **Gasless UX**: Demonstrating USDC-powered paymaster transactions
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 ### On-Chain First Approach
 - **Every click = Transaction**: Each user action triggers a smart contract call
@@ -39,7 +39,7 @@ Arc BreakPoint serves as a research platform for:
 - Real-time on-chain transaction tracking
 - Progressive art reveal system
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 arc-starship/
@@ -79,7 +79,7 @@ arc-starship/
     └── USER_FLOW.md              # User flow documentation
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -128,12 +128,12 @@ npm install
 npm run dev
 ```
 
-## 🎮 How It Works
+##  How It Works
 
 ### User Flow
 
 1. **Connect**: User authenticates with passkey (WebAuthn)
-2. **Click**: User clicks "⚡ CLICK TO TX" button
+2. **Click**: User clicks " CLICK TO TX" button
 3. **Transaction**: Each click triggers `performAction()` on-chain
 4. **Progress**: `totalActions` increments, art unlocks progressively
 5. **Batching**: Optional session mode batches clicks to reduce passkey prompts
@@ -163,7 +163,7 @@ npm run dev
 - **Level 9**: 520,000 TXs — "Arc Vanguard"
 - **Level 10**: 1,000,000 TXs — "Chainbreaker Prime"
 
-## 📜 Smart Contracts
+## Smart Contracts
 
 ### ArcStarShip.sol
 Main contract tracking transaction counts and player stats.
@@ -180,7 +180,7 @@ Main contract tracking transaction counts and player stats.
 ### StakingContract.sol (Optional)
 USDC staking for game boosts (currently not used in simplified version).
 
-## 🔄 Transaction Flow
+##  Transaction Flow
 
 1. **User connects** → Passkey authentication via Circle SDK
 2. **User clicks** → `performAction(COLLECT)` userOp (gasless)
@@ -189,7 +189,7 @@ USDC staking for game boosts (currently not used in simplified version).
 
 All transactions are **gasless** via Circle paymaster (USDC).
 
-## 🎨 Frontend Architecture
+##  Frontend Architecture
 
 ### State Management
 - `walletStore` - Wallet connection, session keys, preferences
@@ -205,7 +205,7 @@ All transactions are **gasless** via Circle paymaster (USDC).
 - `ArtGallery` - Progressive art reveal based on transaction count
 - `ErrorBoundary` - Error handling
 
-## ⚙️ Environment Variables
+##  Environment Variables
 
 ### Frontend (.env)
 ```env
@@ -225,7 +225,7 @@ ARC_TESTNET_PRIVATE_KEY=your-deployer-key
 USDC_TOKEN_ADDRESS=0x...
 ```
 
-## 📊 Testing & Metrics
+##  Testing & Metrics
 
 Arc BreakPoint is designed to:
 - Generate high-frequency on-chain transactions
@@ -239,7 +239,7 @@ Monitor:
 - Passkey prompt frequency
 - Chain throughput under load
 
-## ⚠️ Important Notes
+##  Important Notes
 
 - **Stress Testing**: Designed to generate high transaction volume
 - **Gasless**: All user transactions are gasless via Circle paymaster
@@ -247,7 +247,7 @@ Monitor:
 - **Testnet Only**: Currently configured for Arc Testnet
 - **Experimental**: This is a research platform, not production-ready
 
-## 🤝 Contributing
+##  Contributing
 
 This is an experimental platform for stress testing Arc testnet. Focus areas:
 1. Reliable transaction execution
