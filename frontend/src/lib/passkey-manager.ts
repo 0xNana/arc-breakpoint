@@ -19,9 +19,6 @@ export interface PasskeyAuthOptions {
   maxRetries?: number;
 }
 
-/**
- * Robust Passkey Manager following Circle Modular Wallets best practices
- */
 export class PasskeyManager {
   private static instance: PasskeyManager | null = null;
 
@@ -34,10 +31,6 @@ export class PasskeyManager {
     return PasskeyManager.instance;
   }
 
-  /**
-   * Normalize and validate client URL
-   * CLIENT_URL should be Circle's API endpoint, not your frontend URL
-   */
   private normalizeClientUrl(): string {
     if (!CLIENT_CONFIG.CLIENT_URL) {
       throw new Error(
@@ -50,7 +43,6 @@ export class PasskeyManager {
 
     let clientUrl = CLIENT_CONFIG.CLIENT_URL.trim();
 
-    // Warn if it looks like a frontend dev server (but allow Circle's localhost if needed)
     if (
       (clientUrl.includes("localhost:3000") || clientUrl.includes("localhost:5173") || clientUrl.includes("localhost:5174")) &&
       !clientUrl.includes("modular-sdk.circle.com")
@@ -64,7 +56,6 @@ export class PasskeyManager {
       );
     }
 
-    // Add protocol if missing
     if (!clientUrl.startsWith("http")) {
       const isLocalhost =
         clientUrl.includes("localhost") ||
@@ -75,7 +66,6 @@ export class PasskeyManager {
       clientUrl = isLocalhost ? `http://${clientUrl}` : `https://${clientUrl}`;
     }
 
-    // Validate URL format
     try {
       new URL(clientUrl);
     } catch {
@@ -88,9 +78,6 @@ export class PasskeyManager {
     return clientUrl;
   }
 
-  /**
-   * Create passkey transport with validation
-   */
   private createPasskeyTransport() {
     if (!CLIENT_CONFIG.CLIENT_KEY) {
       throw new Error("VITE_CLIENT_KEY is not set in environment variables");
@@ -98,7 +85,6 @@ export class PasskeyManager {
 
     const clientUrl = this.normalizeClientUrl();
 
-    // Warn about potential misconfiguration
     if (
       clientUrl.includes("localhost:3000") ||
       clientUrl.includes("localhost:5173") ||
@@ -113,9 +99,6 @@ export class PasskeyManager {
     return toPasskeyTransport(clientUrl, CLIENT_CONFIG.CLIENT_KEY);
   }
 
-  /**
-   * Attempt passkey authentication with proper error handling
-   */
   private async attemptAuth(
     mode: WebAuthnMode,
     username: string
@@ -126,10 +109,9 @@ export class PasskeyManager {
 
     const normalizedUsername = username.trim();
 
-    // Validate username format (alphanumeric, underscore, hyphen, 3-30 chars)
-    if (!/^[a-zA-Z0-9_-]{3,30}$/.test(normalizedUsername)) {
+    if (!/^[a-zA-Z0-9_-]{5,30}$/.test(normalizedUsername)) {
       throw new Error(
-        "Username must be 3-30 characters and contain only letters, numbers, underscores, or hyphens"
+        "Username must be 5-30 characters and contain only letters, numbers, underscores, or hyphens"
       );
     }
 
@@ -144,11 +126,9 @@ export class PasskeyManager {
 
       return credential;
     } catch (error) {
-      // Handle WebAuthn-specific errors
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
 
-        // User cancelled or timeout
         if (
           errorMsg.includes("notallowed") ||
           errorMsg.includes("timeout") ||
@@ -157,7 +137,6 @@ export class PasskeyManager {
           throw new Error("Passkey authentication was cancelled or timed out");
         }
 
-        // Invalid credential (user doesn't exist for login)
         if (errorMsg.includes("invalid") && mode === WebAuthnMode.Login) {
           throw new Error(
             "No passkey found for this username.\n\n" +
@@ -165,7 +144,6 @@ export class PasskeyManager {
           );
         }
 
-        // User already exists (for register)
         if (
           (errorMsg.includes("already exists") ||
             errorMsg.includes("duplicate") ||
@@ -179,7 +157,6 @@ export class PasskeyManager {
           );
         }
 
-        // Network/server errors
         if (
           errorMsg.includes("failed to fetch") ||
           errorMsg.includes("network")
@@ -189,14 +166,12 @@ export class PasskeyManager {
           );
         }
 
-        // JSON parsing errors (server issues)
         if (errorMsg.includes("json") || errorMsg.includes("unexpected end")) {
           throw new Error(
             "Server error: Invalid response from authentication server. Please try again later."
           );
         }
 
-        // 404 errors
         if (errorMsg.includes("404") || errorMsg.includes("not found")) {
           throw new Error(
             "Server endpoint not found. Please verify CLIENT_URL is correct."
@@ -204,15 +179,10 @@ export class PasskeyManager {
         }
       }
 
-      // Re-throw with original error if we can't categorize it
       throw error;
     }
   }
 
-  /**
-   * Authenticate with specified mode or automatic detection
-   * For "auto" mode: tries register first (better for new users), then login if user exists
-   */
   async authenticate(
     options: PasskeyAuthOptions
   ): Promise<PasskeyAuthResult> {
@@ -220,11 +190,8 @@ export class PasskeyManager {
 
     let lastError: Error | null = null;
 
-    // Auto mode: Try register first (better UX for new users)
-    // If register fails because user exists, fall back to login
     if (preferMode === "auto") {
       try {
-        // Try register first - creates passkey for new users
         const credential = await this.attemptAuth(
           WebAuthnMode.Register,
           username
@@ -237,22 +204,18 @@ export class PasskeyManager {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         
-        // If register fails because user already exists, try login
         if (
           lastError.message.includes("already exists") ||
           lastError.message.includes("duplicate") ||
           lastError.message.includes("user exists")
         ) {
           console.log("User already exists, attempting login...");
-          // Fall through to login
         } else {
-          // For other errors in auto mode, try login as fallback
           console.log("Registration failed, trying login...");
         }
       }
     }
 
-    // Try login if login mode preferred or auto mode register failed
     if (preferMode === "login" || (preferMode === "auto" && lastError)) {
       try {
         const credential = await this.attemptAuth(
@@ -267,7 +230,6 @@ export class PasskeyManager {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
         
-        // If login fails and we're in auto mode, we've tried both
         if (preferMode === "auto") {
           throw new Error(
             "Unable to authenticate. Please try:\n" +
@@ -282,7 +244,6 @@ export class PasskeyManager {
       }
     }
 
-    // Try register if register mode preferred
     if (preferMode === "register") {
       let attempts = 0;
       while (attempts < maxRetries) {
@@ -300,7 +261,6 @@ export class PasskeyManager {
           attempts++;
           lastError = error instanceof Error ? error : new Error(String(error));
 
-          // Don't retry on user cancellation
           if (
             lastError.message.includes("cancelled") ||
             lastError.message.includes("timeout")
@@ -308,9 +268,8 @@ export class PasskeyManager {
             throw lastError;
           }
 
-          // If we have retries left, wait and try again
           if (attempts < maxRetries && retryOnFailure) {
-            const delay = Math.min(1000 * attempts, 3000); // Exponential backoff, max 3s
+            const delay = Math.min(1000 * attempts, 3000);
             console.log(`Retrying registration in ${delay}ms... (attempt ${attempts}/${maxRetries})`);
             await new Promise((resolve) => setTimeout(resolve, delay));
             continue;
@@ -321,13 +280,9 @@ export class PasskeyManager {
       }
     }
 
-    // Should never reach here, but TypeScript needs it
     throw lastError || new Error("Authentication failed");
   }
 
-  /**
-   * Check if WebAuthn is supported in this browser
-   */
   static isSupported(): boolean {
     return (
       typeof window !== "undefined" &&
@@ -338,9 +293,6 @@ export class PasskeyManager {
     );
   }
 
-  /**
-   * Get WebAuthn support details
-   */
   static getSupportInfo(): {
     supported: boolean;
     platform: boolean;
@@ -366,19 +318,15 @@ export class PasskeyManager {
       reasons.push("Credentials API not available");
     }
 
-    // Check for platform authenticator support
     if (supported && window.PublicKeyCredential) {
       try {
-        // Check if platform authenticator is available
         if (
           typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable ===
           "function"
         ) {
-          // This is async, but we're just checking if the method exists
           platform = true;
         }
       } catch {
-        // Ignore
       }
     }
 
@@ -386,6 +334,5 @@ export class PasskeyManager {
   }
 }
 
-// Export singleton instance
 export const passkeyManager = PasskeyManager.getInstance();
 

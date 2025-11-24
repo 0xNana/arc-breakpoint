@@ -27,6 +27,12 @@ async function main() {
   }
 
   // Load compiled contract artifacts
+  const stakingArtifact = JSON.parse(
+    fs.readFileSync(
+      path.join(__dirname, "../artifacts/contracts/StakingContract.sol/StakingContract.json"),
+      "utf8"
+    )
+  );
   const arcStarShipArtifact = JSON.parse(
     fs.readFileSync(
       path.join(__dirname, "../artifacts/contracts/ArcStarShip.sol/ArcStarShip.json"),
@@ -34,27 +40,7 @@ async function main() {
     )
   );
 
-  const stakingArtifact = JSON.parse(
-    fs.readFileSync(
-      path.join(__dirname, "../artifacts/contracts/StakingContract.sol/StakingContract.json"),
-      "utf8"
-    )
-  );
-
-  // Deploy ArcStarShip
-  console.log("Deploying ArcStarShip...");
-  const arcStarShipHash = await deployer.deployContract({
-    abi: arcStarShipArtifact.abi,
-    bytecode: arcStarShipArtifact.bytecode as `0x${string}`,
-    account: deployer.account,
-    args: [],
-  });
-
-  const arcStarShipReceipt = await publicClient.waitForTransactionReceipt({
-    hash: arcStarShipHash,
-  });
-
-  // Deploy StakingContract
+  // Deploy StakingContract first so we can pass address into ArcStarShip
   console.log("Deploying StakingContract...");
   const stakingHash = await deployer.deployContract({
     abi: stakingArtifact.abi,
@@ -65,6 +51,23 @@ async function main() {
 
   const stakingReceipt = await publicClient.waitForTransactionReceipt({
     hash: stakingHash,
+  });
+  const stakingAddress = stakingReceipt.contractAddress;
+  if (!stakingAddress) {
+    throw new Error("Failed to obtain StakingContract address from receipt");
+  }
+
+  // Deploy ArcStarShip router with staking dependency
+  console.log("Deploying ArcStarShip...");
+  const arcStarShipHash = await deployer.deployContract({
+    abi: arcStarShipArtifact.abi,
+    bytecode: arcStarShipArtifact.bytecode as `0x${string}`,
+    account: deployer.account,
+    args: [stakingAddress],
+  });
+
+  const arcStarShipReceipt = await publicClient.waitForTransactionReceipt({
+    hash: arcStarShipHash,
   });
 
   console.log("✅ Deployment complete!");

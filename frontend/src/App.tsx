@@ -1,17 +1,18 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { MainMenu } from "./pages/MainMenu";
-import { GameScreen } from "./pages/GameScreen";
-import { StakingScreen } from "./pages/StakingScreen";
+import { ClickerScreen } from "./pages/ClickerScreen";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MainMenu />} />
-        <Route path="/game" element={<GameScreen />} />
-        <Route path="/staking" element={<StakingScreen />} />
-      </Routes>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<MainMenu />} />
+          <Route path="/clicker" element={<ClickerScreen />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

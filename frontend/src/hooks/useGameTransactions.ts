@@ -1,15 +1,16 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { stringToHex, type Address, type Hex } from "viem";
 import { useWalletStore } from "../store/walletStore";
 import { useGameStore } from "../store/gameStore";
 import {
-  ActionType,
   EMPTY_METADATA,
   ZERO_ADDRESS,
   encodePerformAction,
   getPlayerStats,
 } from "../lib/game-contract";
 import { CONTRACT_ADDRESSES } from "../config/chain";
+import { isSessionKeyValid } from "../lib/session-keys";
+import { logger, logBatch, logTransaction, logSession } from "../lib/logger";
 
 function toMetadataHex(message?: string): Hex {
   if (!message) {
@@ -19,20 +20,23 @@ function toMetadataHex(message?: string): Hex {
   return stringToHex(message);
 }
 
-/**
- * Handles high-frequency TX clicker calls along with UI bookkeeping
- */
+interface QueuedAction {
+  entryId: string;
+  note?: string;
+  referrer?: Address;
+  createdAt: number;
+}
+
 export function useGameTransactions() {
-  const { bundlerClient, publicClient, address, smartAccount } = useWalletStore();
-  const {
-    addActionEntry,
-    updateActionEntry,
-    setProfile,
-    incrementPendingTx,
-    decrementPendingTx,
-  } = useGameStore();
+  const { bundlerClient, publicClient, address, smartAccount, sessionKey, sessionEnabled, batchSize } = useWalletStore();
+  const { setProfile, incrementPendingTx, decrementPendingTx } = useGameStore();
 
   const isRequestInProgressRef = useRef(false);
+  const actionQueueRef = useRef<QueuedAction[]>([]);
+  
+  // Real-time click tracking for UI
+  const [totalClicks, setTotalClicks] = useState(0);
+  const [queuedActions, setQueuedActions] = useState(0);
 
   const refreshProfile = useCallback(async () => {
     if (!publicClient || !address) return;
@@ -42,17 +46,96 @@ export function useGameTransactions() {
         ...stats,
       });
     } catch (error) {
-      console.error("Failed to refresh player stats", error);
+      logger.error("Failed to refresh player stats", error);
     }
   }, [publicClient, address, setProfile]);
 
+  const checkSessionActive = useCallback(() => {
+    return sessionEnabled && sessionKey && isSessionKeyValid(sessionKey);
+  }, [sessionEnabled, sessionKey]);
+
+  const sendBatch = useCallback(async () => {
+    if (actionQueueRef.current.length === 0 || isRequestInProgressRef.current) {
+      return;
+    }
+
+    if (!bundlerClient || !smartAccount || !address) {
+      actionQueueRef.current = [];
+      return;
+    }
+
+    const MAX_BATCH_CHUNK = 50;
+    const allActions = [...actionQueueRef.current];
+    actionQueueRef.current = [];
+    setQueuedActions(0); // Clear UI queue count
+    
+    logBatch.start(allActions.length);
+    isRequestInProgressRef.current = true;
+    
+    for (let i = 0; i < allActions.length; i += MAX_BATCH_CHUNK) {
+      const batch = allActions.slice(i, i + MAX_BATCH_CHUNK);
+
+      isRequestInProgressRef.current = true;
+      incrementPendingTx();
+
+      try {
+        const calls = batch.map((queued) => {
+          const metadata = toMetadataHex(queued.note);
+          const referrerAddress = queued.referrer || ZERO_ADDRESS;
+          return {
+            to: CONTRACT_ADDRESSES.GAME as Address,
+            data: encodePerformAction(0, metadata, referrerAddress),
+          };
+        });
+
+        const chunkNumber = Math.floor(i / MAX_BATCH_CHUNK) + 1;
+        const totalChunks = Math.ceil(allActions.length / MAX_BATCH_CHUNK);
+        logBatch.chunk(chunkNumber, totalChunks, batch.length);
+
+        const userOpHash = await bundlerClient.sendUserOperation({
+          account: smartAccount,
+          calls,
+          paymaster: true,
+        });
+
+        await bundlerClient.waitForUserOperationReceipt({
+          hash: userOpHash,
+        });
+
+        logBatch.success(batch.length);
+        
+        if (i + MAX_BATCH_CHUNK < allActions.length) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      } catch (error) {
+        logBatch.error(error, batch.length);
+        actionQueueRef.current.push(...batch);
+        setQueuedActions(actionQueueRef.current.length); // Update UI queue count
+        isRequestInProgressRef.current = false;
+        decrementPendingTx();
+        throw error;
+      } finally {
+        decrementPendingTx();
+      }
+    }
+    
+    isRequestInProgressRef.current = false;
+    await refreshProfile();
+  }, [
+    bundlerClient,
+    smartAccount,
+    address,
+    refreshProfile,
+    incrementPendingTx,
+    decrementPendingTx,
+  ]);
+
+
   const performAction = useCallback(
     async ({
-      action,
       note,
       referrer,
     }: {
-      action: ActionType;
       note?: string;
       referrer?: Address;
     }) => {
@@ -60,18 +143,38 @@ export function useGameTransactions() {
         throw new Error("Wallet not connected");
       }
 
+      const entryId = `${Date.now()}-${Math.random()}`;
+
+      // Always increment total clicks for real-time UI feedback
+      setTotalClicks(prev => prev + 1);
+
+      const isActive = checkSessionActive();
+      
+      if (isActive) {
+        logTransaction.queue(actionQueueRef.current.length + 1, batchSize);
+        actionQueueRef.current.push({
+          entryId,
+          note,
+          referrer,
+          createdAt: Date.now(),
+        });
+        
+        // Update UI queue count
+        setQueuedActions(actionQueueRef.current.length);
+
+        if (actionQueueRef.current.length >= batchSize) {
+          logger.info(`Batch size reached (${batchSize}), sending batch...`);
+          await sendBatch();
+        }
+
+        return;
+      } else {
+        logTransaction.immediate();
+      }
+
       if (isRequestInProgressRef.current) {
         throw new Error("Another transaction is still awaiting signature");
       }
-
-      const entryId = `${Date.now()}-${action}`;
-      addActionEntry({
-        id: entryId,
-        action,
-        status: "pending",
-        createdAt: Date.now(),
-        note,
-      });
 
       const metadata = toMetadataHex(note);
       const referrerAddress = referrer || ZERO_ADDRESS;
@@ -84,29 +187,20 @@ export function useGameTransactions() {
           calls: [
             {
               to: CONTRACT_ADDRESSES.GAME as Address,
-              data: encodePerformAction(action, metadata, referrerAddress),
+              data: encodePerformAction(0, metadata, referrerAddress),
             },
           ],
           paymaster: true,
         });
 
-        const { receipt } = await bundlerClient.waitForUserOperationReceipt({
+        await bundlerClient.waitForUserOperationReceipt({
           hash: userOpHash,
         });
 
-        updateActionEntry(entryId, {
-          status: "confirmed",
-          txHash: receipt.transactionHash,
-        });
-
+        logTransaction.success();
         await refreshProfile();
       } catch (error) {
-        console.error("performAction failed", error);
-        updateActionEntry(entryId, {
-          status: "failed",
-          error:
-            error instanceof Error ? error.message : "Unknown transaction error",
-        });
+        logTransaction.error(error);
         throw error;
       } finally {
         isRequestInProgressRef.current = false;
@@ -117,17 +211,28 @@ export function useGameTransactions() {
       bundlerClient,
       smartAccount,
       address,
-      addActionEntry,
-      updateActionEntry,
+      checkSessionActive,
+      batchSize,
       refreshProfile,
       incrementPendingTx,
       decrementPendingTx,
+      sendBatch,
     ]
   );
+
+  useEffect(() => {
+    const isActive = checkSessionActive();
+    if (!isActive && actionQueueRef.current.length > 0) {
+      logSession.flush(actionQueueRef.current.length);
+      sendBatch();
+    }
+  }, [sessionEnabled, sessionKey, checkSessionActive, sendBatch]);
 
   return {
     performAction,
     refreshProfile,
+    totalClicks,
+    queuedActions,
   };
 }
 

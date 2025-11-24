@@ -1,46 +1,52 @@
-# Arc StarShip 
+# Arc BreakPoint
 
-**The First GameFi on ARC | USDC-Powered | Stress Testing with On-Chain Transactions**
+**Passkey Authentication & Chain TPS Testing | USDC-Powered | Stress Testing with OnChain Transactions**
 
-Arc StarShip is a GameFi space shooter where **every item collection is an on-chain transaction**, designed to stress test the Arc testnet with gasless passkey-based transactions.
+Arc BreakPoint is an experimental platform where **every click is an on-chain transaction**, designed to stress test the Arc testnet with gasless passkey-based transactions and measure chain throughput.
 
-##  Architecture Overview
+## 🎯 Purpose
+
+Arc BreakPoint serves as a research platform for:
+- **Passkey Authentication**: Testing WebAuthn-based wallet authentication via Circle Modular Wallets
+- **Chain TPS Testing**: Measuring Arc Testnet throughput by generating high-frequency on-chain transactions
+- **Gasless UX**: Demonstrating USDC-powered paymaster transactions
+
+## 🏗️ Architecture Overview
 
 ### On-Chain First Approach
-- **Every collection = Transaction**: XP stars, USDC tokens, boost items, and bombs all trigger smart contract calls
+- **Every click = Transaction**: Each user action triggers a smart contract call
 - **Gasless Transactions**: Using Circle Modular Wallets with passkey authentication
 - **Stress Testing**: Designed to generate high transaction volume on Arc testnet
+- **Progressive Art Unlocks**: 10 levels from 10K to 1M transactions
 
 ### Tech Stack
 
 **Smart Contracts:**
 - Solidity 0.8.28
 - Hardhat + Viem
-- OpenZeppelin Contracts
 - Arc Testnet (OP Stack)
 
 **Frontend:**
 - React 18 + TypeScript
 - Vite
-- Pixi.js (for game rendering)
 - Circle Modular Wallets SDK
 - Zustand (state management)
 
 **Key Features:**
 - Passkey-based wallet (no seed phrases)
 - Gasless transactions via Circle paymaster
-- Real-time on-chain game state
-- USDC staking for XP multipliers
-- Leaderboards and quests (future)
+- Session-based batching (reduce passkey prompts)
+- Real-time on-chain transaction tracking
+- Progressive art reveal system
 
-##  Project Structure
+## 📁 Project Structure
 
 ```
 arc-starship/
 ├── smart-contract/
 │   ├── contracts/
-│   │   ├── ArcStarShip.sol      # Main game contract (on-chain state)
-│   │   └── StakingContract.sol   # USDC staking for boosts
+│   │   ├── ArcStarShip.sol      # Main contract (tracks totalActions)
+│   │   └── StakingContract.sol   # USDC staking (optional)
 │   ├── scripts/
 │   │   └── deploy.ts             # Deployment script
 │   └── ignition/
@@ -49,26 +55,37 @@ arc-starship/
 │
 ├── frontend/
 │   ├── src/
+│   │   ├── components/
+│   │   │   ├── ArtGallery.tsx    # Progressive art reveal
+│   │   │   └── ErrorBoundary.tsx
 │   │   ├── config/               # Chain & contract config
 │   │   ├── lib/                  # Wallet & contract utilities
+│   │   │   ├── wallet.ts         # Circle wallet integration
+│   │   │   ├── passkey-manager.ts
+│   │   │   ├── game-contract.ts  # Contract ABI & functions
+│   │   │   ├── art-levels.ts     # Art unlock thresholds
+│   │   │   └── session-keys.ts   # Session batching logic
 │   │   ├── store/                # Zustand state stores
 │   │   ├── hooks/                # React hooks
+│   │   │   ├── useGameTransactions.ts
+│   │   │   └── useSessionKey.ts
 │   │   └── pages/                # React pages
-│   └── package.json
+│   │       ├── MainMenu.tsx      # Landing page
+│   │       └── ClickerScreen.tsx # Main clicker interface
+│   └── public/
+│       └── art/                  # Art assets (a.webp - j.webp)
 │
 └── docs/
-    ├── game-architecture.md
-    ├── modular-wallet.md
-    └── mvp-developer-guide.md
+    └── USER_FLOW.md              # User flow documentation
 ```
 
-##  Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
 1. **Circle Modular Wallets Setup:**
    - Client Key from Circle Console
-   - Domain configured: `arc.0xelegant.dev`
+   - Domain configured (e.g., `arc.0xelegant.dev`)
    - API Key for backend (optional)
 
 2. **Arc Testnet Access:**
@@ -98,90 +115,97 @@ npx hardhat ignition deploy ignition/modules/ArcStarShip.ts --network arcTestnet
 cd frontend
 npm install
 
-# Create .env file (copy from .env.example)
+# Create .env file
 # VITE_CLIENT_KEY=your-client-key
 # VITE_CLIENT_URL=https://arc.0xelegant.dev
 # VITE_ARC_RPC_URL=your-arc-rpc-url
 # VITE_ARC_CHAIN_ID=your-chain-id
 # VITE_GAME_CONTRACT_ADDRESS=deployed-game-address
-# VITE_STAKING_CONTRACT_ADDRESS=deployed-staking-address
+# VITE_STAKING_CONTRACT_ADDRESS=deployed-staking-address (optional)
 # VITE_USDC_CONTRACT_ADDRESS=usdc-address
 
 # Start dev server
 npm run dev
 ```
 
-##  Game Mechanics
+## 🎮 How It Works
 
-### Core Loop
-1. Player starts session → `startSession()` transaction
-2. Items fall from top (XP stars ⭐, USDC 💰, boosts 🚀, bombs 💣)
-3. **Every collection** → `collectItem()` or `batchCollectItems()` transaction
-4. Game ends when health = 0 → `endSession()` transaction
+### User Flow
 
-### On-Chain State
-- XP accumulated
-- USDC collected
-- Items collected count
-- Bombs hit
-- Health remaining
-- Session active status
+1. **Connect**: User authenticates with passkey (WebAuthn)
+2. **Click**: User clicks "⚡ CLICK TO TX" button
+3. **Transaction**: Each click triggers `performAction()` on-chain
+4. **Progress**: `totalActions` increments, art unlocks progressively
+5. **Batching**: Optional session mode batches clicks to reduce passkey prompts
 
-### Staking Boosts
-- **25 USDC** → 1.2x XP multiplier (7 days)
-- **50 USDC** → 1.5x XP multiplier (7 days)
-- **100 USDC** → 2.0x XP multiplier (7 days)
+### Transaction Modes
 
-##  Smart Contracts
+**Default Mode (Session Disabled):**
+- Each click = One passkey prompt = One transaction
+- Immediate on-chain execution
+
+**Session Mode (Batching):**
+- One passkey prompt to start session
+- Clicks are queued locally
+- Batched every 3 seconds OR after 5 clicks
+- Single transaction with multiple calls
+
+### Art Unlock Levels
+
+- **Level 1**: 10,000 TXs — "Initiate"
+- **Level 2**: 25,000 TXs — "Cadre"
+- **Level 3**: 50,000 TXs — "Voyager"
+- **Level 4**: 80,000 TXs — "Navigator"
+- **Level 5**: 120,000 TXs — "Stellar Pilot"
+- **Level 6**: 180,000 TXs — "Sector Commander"
+- **Level 7**: 260,000 TXs — "Cosmic Sentinel"
+- **Level 8**: 360,000 TXs — "Nebula Warden"
+- **Level 9**: 520,000 TXs — "Arc Vanguard"
+- **Level 10**: 1,000,000 TXs — "Chainbreaker Prime"
+
+## 📜 Smart Contracts
 
 ### ArcStarShip.sol
-Main game contract tracking all session state on-chain.
+Main contract tracking transaction counts and player stats.
 
 **Key Functions:**
-- `startSession()` - Begin new game session
-- `collectItem(sessionId, itemType, multiplier)` - Collect single item
-- `batchCollectItems(sessionId, itemTypes[], multiplier)` - Batch collect (gas optimization)
-- `endSession(sessionId)` - End current session
-- `getCurrentSession(player)` - View current session state
+- `performAction(action, metadata, referrer)` - Execute action (increments totalActions)
+- `getPlayerStats(player)` - View player statistics
 
-### StakingContract.sol
-USDC staking for game boosts.
+**On-Chain State:**
+- `totalActions` - Total transaction count (used for level calculation)
+- `xp`, `dodges`, `scans`, `boosts`, `claims` - Action counters
+- `referralXp` - Referral bonuses
 
-**Key Functions:**
-- `stake(amount)` - Stake USDC (25, 50, or 100 USDC)
-- `unstake()` - Unstake after boost expires
-- `getCurrentMultiplier(user)` - Get active multiplier
-- `hasActiveBoost(user)` - Check if boost is active
+### StakingContract.sol (Optional)
+USDC staking for game boosts (currently not used in simplified version).
 
-##  Transaction Flow
+## 🔄 Transaction Flow
 
 1. **User connects** → Passkey authentication via Circle SDK
-2. **Start game** → `startSession()` userOp (gasless)
-3. **During gameplay** → Each collection triggers:
-   - `collectItem()` for single items, OR
-   - `batchCollectItems()` for multiple items (batched)
-4. **Game ends** → `endSession()` userOp
+2. **User clicks** → `performAction(COLLECT)` userOp (gasless)
+3. **On-chain** → `totalActions++`, event emitted
+4. **Frontend** → Stats refresh, art reveal updates
 
-All transactions are **gasless** via Circle paymaster.
+All transactions are **gasless** via Circle paymaster (USDC).
 
-##  Frontend Architecture
+## 🎨 Frontend Architecture
 
 ### State Management
-- `walletStore` - Wallet connection state
-- `gameStore` - Current game session state
+- `walletStore` - Wallet connection, session keys, preferences
+- `gameStore` - Player profile, pending transactions
 
-### Transaction Handling
-- `useGameTransactions` hook manages all on-chain calls
-- Supports batching for gas optimization
-- Pending transaction tracking
+### Key Hooks
+- `useGameTransactions` - Handles transaction sending and batching
+- `useSessionKey` - Manages session lifecycle and preferences
 
-### Game Engine (TODO)
-- Pixi.js for rendering
-- Collision detection
-- Item spawning logic
-- Real-time transaction calls on collection
+### Components
+- `MainMenu` - Landing page with passkey authentication
+- `ClickerScreen` - Main interface with stats, click button, art gallery
+- `ArtGallery` - Progressive art reveal based on transaction count
+- `ErrorBoundary` - Error handling
 
-##  Environment Variables
+## ⚙️ Environment Variables
 
 ### Frontend (.env)
 ```env
@@ -190,7 +214,7 @@ VITE_CLIENT_URL=https://arc.0xelegant.dev
 VITE_ARC_RPC_URL=your-arc-rpc-url
 VITE_ARC_CHAIN_ID=your-chain-id
 VITE_GAME_CONTRACT_ADDRESS=0x...
-VITE_STAKING_CONTRACT_ADDRESS=0x...
+VITE_STAKING_CONTRACT_ADDRESS=0x... (optional)
 VITE_USDC_CONTRACT_ADDRESS=0x...
 ```
 
@@ -201,48 +225,36 @@ ARC_TESTNET_PRIVATE_KEY=your-deployer-key
 USDC_TOKEN_ADDRESS=0x...
 ```
 
-##  Next Steps
+## 📊 Testing & Metrics
 
-1. **Game Engine Implementation**
-   - Pixi.js integration
-   - Collision detection
-   - Item spawning system
-   - Real-time transaction calls
+Arc BreakPoint is designed to:
+- Generate high-frequency on-chain transactions
+- Measure Arc Testnet throughput (TPS)
+- Test passkey authentication at scale
+- Validate gasless transaction UX
 
-2. **Transaction Optimization**
-   - Implement batching queue
-   - Batch multiple collections into single tx
-   - Optimize for high-frequency calls
+Monitor:
+- Transaction success rate
+- Average confirmation time
+- Passkey prompt frequency
+- Chain throughput under load
 
-3. **Backend (Optional)**
-   - Leaderboard API
-   - Quest tracking
-   - Referral system
-   - Anti-cheat validation
+## ⚠️ Important Notes
 
-4. **UI/UX**
-   - Game screen with Pixi.js
-   - Staking interface
-   - Leaderboard display
-   - Quest board
-
-
-##  Important Notes
-
-- **Stress Testing**: This is designed to generate high transaction volume
+- **Stress Testing**: Designed to generate high transaction volume
 - **Gasless**: All user transactions are gasless via Circle paymaster
-- **On-Chain State**: Every game action is recorded on-chain
+- **On-Chain State**: Every action is recorded on-chain
 - **Testnet Only**: Currently configured for Arc Testnet
+- **Experimental**: This is a research platform, not production-ready
 
 ## 🤝 Contributing
 
-This is an MVP for stress testing Arc testnet. Focus on:
+This is an experimental platform for stress testing Arc testnet. Focus areas:
 1. Reliable transaction execution
-2. Smooth gameplay experience
-3. Efficient batching strategies
-4. Chain performance monitoring
+2. Efficient batching strategies
+3. Chain performance monitoring
+4. Passkey UX optimization
 
 ---
 
-**Built for Arc Testnet | Powered by Circle Modular Wallets | Every Collection is On-Chain** 
-
+**Built for Arc Testnet | Powered by Circle Modular Wallets | Every Click is On-Chain**

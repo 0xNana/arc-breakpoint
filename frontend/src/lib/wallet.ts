@@ -13,7 +13,6 @@ import {
 import { ARC_TESTNET, CLIENT_CONFIG } from "../config/chain";
 import { passkeyManager, type PasskeyAuthResult } from "./passkey-manager";
 
-// Re-export WebAuthnMode and passkey manager for convenience
 export { WebAuthnMode, passkeyManager };
 export type { PasskeyAuthResult };
 
@@ -25,10 +24,6 @@ export interface WalletState {
   address: string | null;
 }
 
-/**
- * Authenticate with passkey (robust implementation)
- * Automatically handles login/register logic
- */
 export async function authenticatePasskey(
   username: string,
   preferMode: "login" | "register" | "auto" = "auto"
@@ -41,9 +36,6 @@ export async function authenticatePasskey(
   });
 }
 
-/**
- * Create modular transport for Arc Testnet
- */
 export function createModularTransport() {
   if (!CLIENT_CONFIG.CLIENT_KEY) {
     throw new Error("VITE_CLIENT_KEY is not set in environment variables");
@@ -52,8 +44,6 @@ export function createModularTransport() {
     throw new Error("VITE_CLIENT_URL is not set in environment variables");
   }
 
-  // Ensure URL has protocol
-  // Use http:// for localhost, https:// for others
   let clientUrl = CLIENT_CONFIG.CLIENT_URL;
   if (!clientUrl.startsWith("http")) {
     const isLocalhost = 
@@ -73,9 +63,6 @@ export function createModularTransport() {
   );
 }
 
-/**
- * Create public client for Arc Testnet
- */
 export function createArcPublicClient() {
   const transport = createModularTransport();
   
@@ -85,10 +72,6 @@ export function createArcPublicClient() {
   }) as PublicClient;
 }
 
-/**
- * Create Circle Smart Account and Bundler Client
- * Following Circle Modular Wallets documentation pattern
- */
 export async function createSmartAccount(
   authResult: PasskeyAuthResult
 ): Promise<{
@@ -98,11 +81,8 @@ export async function createSmartAccount(
   address: `0x${string}`;
 }> {
   try {
-    // Step 1: Create public client (following docs pattern)
     const publicClient = createArcPublicClient();
 
-    // Step 2: Create Circle Smart Account with passkey credential
-    // Following: toCircleSmartAccount({ client, owner: toWebAuthnAccount({ credential }) })
     const smartAccount = await toCircleSmartAccount({
       client: publicClient,
       owner: toWebAuthnAccount({
@@ -110,9 +90,6 @@ export async function createSmartAccount(
       }),
     });
 
-    // Step 3: Create bundler client
-    // Following the working example: createBundlerClient({ chain, transport })
-    // The account is passed explicitly when calling sendUserOperation
     const bundlerClient = createBundlerClient({
       chain: ARC_TESTNET,
       transport: createModularTransport() as Transport,
