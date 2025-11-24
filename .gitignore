@@ -1,0 +1,13 @@
+# node modules
+node_modules
+
+# environment
+.env
+.env.local
+.env.*.local
+
+# smart contract
+cache/
+artifacts/
+typechain-types/
+coverage/
