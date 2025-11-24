@@ -11,3 +11,6 @@ cache/
 artifacts/
 typechain-types/
 coverage/
+
+# docs
+docs/
