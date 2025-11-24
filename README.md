@@ -1,10 +1,10 @@
-# Arc StarShip ⚡
+# Arc StarShip 
 
 **The First GameFi on ARC | USDC-Powered | Stress Testing with On-Chain Transactions**
 
 Arc StarShip is a GameFi space shooter where **every item collection is an on-chain transaction**, designed to stress test the Arc testnet with gasless passkey-based transactions.
 
-## 🎮 Architecture Overview
+##  Architecture Overview
 
 ### On-Chain First Approach
 - **Every collection = Transaction**: XP stars, USDC tokens, boost items, and bombs all trigger smart contract calls
@@ -33,7 +33,7 @@ Arc StarShip is a GameFi space shooter where **every item collection is an on-ch
 - USDC staking for XP multipliers
 - Leaderboards and quests (future)
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 arc-starship/
@@ -62,7 +62,7 @@ arc-starship/
     └── mvp-developer-guide.md
 ```
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -111,7 +111,7 @@ npm install
 npm run dev
 ```
 
-## 🎯 Game Mechanics
+##  Game Mechanics
 
 ### Core Loop
 1. Player starts session → `startSession()` transaction
@@ -132,7 +132,7 @@ npm run dev
 - **50 USDC** → 1.5x XP multiplier (7 days)
 - **100 USDC** → 2.0x XP multiplier (7 days)
 
-## 🔧 Smart Contracts
+##  Smart Contracts
 
 ### ArcStarShip.sol
 Main game contract tracking all session state on-chain.
@@ -153,7 +153,7 @@ USDC staking for game boosts.
 - `getCurrentMultiplier(user)` - Get active multiplier
 - `hasActiveBoost(user)` - Check if boost is active
 
-## 📝 Transaction Flow
+##  Transaction Flow
 
 1. **User connects** → Passkey authentication via Circle SDK
 2. **Start game** → `startSession()` userOp (gasless)
@@ -164,7 +164,7 @@ USDC staking for game boosts.
 
 All transactions are **gasless** via Circle paymaster.
 
-## 🎨 Frontend Architecture
+##  Frontend Architecture
 
 ### State Management
 - `walletStore` - Wallet connection state
@@ -181,7 +181,7 @@ All transactions are **gasless** via Circle paymaster.
 - Item spawning logic
 - Real-time transaction calls on collection
 
-## 🔐 Environment Variables
+##  Environment Variables
 
 ### Frontend (.env)
 ```env
@@ -201,7 +201,7 @@ ARC_TESTNET_PRIVATE_KEY=your-deployer-key
 USDC_TOKEN_ADDRESS=0x...
 ```
 
-## 🚧 Next Steps
+##  Next Steps
 
 1. **Game Engine Implementation**
    - Pixi.js integration
@@ -226,13 +226,8 @@ USDC_TOKEN_ADDRESS=0x...
    - Leaderboard display
    - Quest board
 
-## 📚 Documentation
 
-- [Game Architecture](./docs/game-architecture.md)
-- [Modular Wallet Setup](./docs/modular-wallet.md)
-- [MVP Developer Guide](./docs/mvp-developer-guide.md)
-
-## ⚠️ Important Notes
+##  Important Notes
 
 - **Stress Testing**: This is designed to generate high transaction volume
 - **Gasless**: All user transactions are gasless via Circle paymaster
@@ -249,5 +244,5 @@ This is an MVP for stress testing Arc testnet. Focus on:
 
 ---
 
-**Built for Arc Testnet | Powered by Circle Modular Wallets | Every Collection is On-Chain** ⚡
+**Built for Arc Testnet | Powered by Circle Modular Wallets | Every Collection is On-Chain** 
 
