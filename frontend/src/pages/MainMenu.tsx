@@ -53,10 +53,10 @@ export function MainMenu() {
 
       const username = usernameInput.trim();
 
-      if (!/^[a-zA-Z0-9_-]{3,30}$/.test(username)) {
+      if (!/^[a-zA-Z0-9_-]{5,30}$/.test(username)) {
         alert(
           "Invalid username format.\n\n" +
-          "Username must be 3-30 characters and contain only:\n" +
+          "Username must be 5-30 characters and contain only:\n" +
           "• Letters (a-z, A-Z)\n" +
           "• Numbers (0-9)\n" +
           "• Underscores (_)\n" +
