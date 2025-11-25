@@ -42,7 +42,7 @@ export function MainMenu() {
       const usernameInput = prompt(
         `${action}\n\nEnter your username:\n\n` +
         "Requirements:\n" +
-        "• 3-30 characters\n" +
+        "• 5-30 characters\n" +
         "• Letters, numbers, underscores, or hyphens only"
       );
 

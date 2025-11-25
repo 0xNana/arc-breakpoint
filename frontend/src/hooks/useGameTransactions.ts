@@ -34,8 +34,7 @@ export function useGameTransactions() {
   const isRequestInProgressRef = useRef(false);
   const actionQueueRef = useRef<QueuedAction[]>([]);
   
-  // Real-time click tracking for UI
-  const [totalClicks, setTotalClicks] = useState(0);
+  const [pendingClicks, setPendingClicks] = useState(0);
   const [queuedActions, setQueuedActions] = useState(0);
 
   const refreshProfile = useCallback(async () => {
@@ -45,6 +44,7 @@ export function useGameTransactions() {
       setProfile({
         ...stats,
       });
+      setPendingClicks(0);
     } catch (error) {
       logger.error("Failed to refresh player stats", error);
     }
@@ -67,7 +67,7 @@ export function useGameTransactions() {
     const MAX_BATCH_CHUNK = 50;
     const allActions = [...actionQueueRef.current];
     actionQueueRef.current = [];
-    setQueuedActions(0); // Clear UI queue count
+    setQueuedActions(0); 
     
     logBatch.start(allActions.length);
     isRequestInProgressRef.current = true;
@@ -110,7 +110,7 @@ export function useGameTransactions() {
       } catch (error) {
         logBatch.error(error, batch.length);
         actionQueueRef.current.push(...batch);
-        setQueuedActions(actionQueueRef.current.length); // Update UI queue count
+        setQueuedActions(actionQueueRef.current.length); 
         isRequestInProgressRef.current = false;
         decrementPendingTx();
         throw error;
@@ -145,8 +145,7 @@ export function useGameTransactions() {
 
       const entryId = `${Date.now()}-${Math.random()}`;
 
-      // Always increment total clicks for real-time UI feedback
-      setTotalClicks(prev => prev + 1);
+      setPendingClicks(prev => prev + 1);
 
       const isActive = checkSessionActive();
       
@@ -159,7 +158,6 @@ export function useGameTransactions() {
           createdAt: Date.now(),
         });
         
-        // Update UI queue count
         setQueuedActions(actionQueueRef.current.length);
 
         if (actionQueueRef.current.length >= batchSize) {
@@ -231,7 +229,7 @@ export function useGameTransactions() {
   return {
     performAction,
     refreshProfile,
-    totalClicks,
+    pendingClicks,
     queuedActions,
   };
 }

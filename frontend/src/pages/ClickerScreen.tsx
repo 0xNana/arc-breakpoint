@@ -24,7 +24,7 @@ export function ClickerScreen() {
     setBatchSize,
   } = useWalletStore();
   const { profile, pendingTransactions } = useGameStore();
-  const { performAction, refreshProfile, totalClicks, queuedActions } = useGameTransactions();
+  const { performAction, refreshProfile, pendingClicks, queuedActions } = useGameTransactions();
   const {
     isActive: isSessionActive,
     isCreating: isCreatingSession,
@@ -50,8 +50,8 @@ export function ClickerScreen() {
     return () => clearInterval(interval);
   }, [refreshProfile]);
 
-  // Use real-time click count for immediate UI feedback
-  const totalActions = BigInt(Number(profile?.totalActions || 0n) + totalClicks);
+  // Use pending clicks for immediate UI feedback (resets when transactions confirm)
+  const totalActions = BigInt(Number(profile?.totalActions || 0n) + pendingClicks);
   const txCount = Number(totalActions);
   const currentLevel = useMemo(() => {
     try {
