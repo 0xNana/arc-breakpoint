@@ -96,6 +96,11 @@ export class PasskeyManager {
       );
     }
 
+    const currentOrigin = window.location.origin;
+    const isProduction = currentOrigin.includes('0xelegant.dev');
+    
+    console.log('WebAuthn Origin:', currentOrigin, 'Production:', isProduction);
+
     return toPasskeyTransport(clientUrl, CLIENT_CONFIG.CLIENT_KEY);
   }
 
@@ -128,6 +133,14 @@ export class PasskeyManager {
     } catch (error) {
       if (error instanceof Error) {
         const errorMsg = error.message.toLowerCase();
+
+        if (errorMsg.includes("relying party id") || errorMsg.includes("registrable domain")) {
+          throw new Error(
+            "Domain configuration error. The app needs to be configured for this domain in Circle's console.\n\n" +
+            "Current domain: " + window.location.hostname + "\n" +
+            "Please contact support to update the allowed domains."
+          );
+        }
 
         if (
           errorMsg.includes("notallowed") ||
